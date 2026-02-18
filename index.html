@@ -1,650 +1,671 @@
-import { useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ScatterChart, Scatter, ZAxis,
-  ResponsiveContainer, Cell
-} from "recharts";
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Settore Agrumi — Analisi Comparativa</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg: #07090d;
+    --surface: #0d111a;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --dim: #2a2f3d;
+    --capua: #e53935;
+    --reggina: #7b1fa2;
+    --ms: #f57c00;
+    --gatto: #2e7d32;
+    --corleone: #1565c0;
+    --gioia: #00695c;
+    --citro: #bf360c;
+    --eurofood: #6a1b9a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 52px 56px 36px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .header-left h1 {
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    color: #fff;
+  }
+  .header-left h1 span { color: var(--ms); }
+  .header-left p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.4px;
+  }
+  .header-badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .badge:hover { opacity: 0.8; transform: translateY(-1px); }
+
+  /* ── TABS ── */
+  nav {
+    display: flex;
+    gap: 0;
+    padding: 0 56px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 16px 22px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: #fff; border-bottom-color: var(--ms); }
+
+  /* ── MAIN ── */
+  main { padding: 44px 56px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .panel-header { margin-bottom: 32px; }
+  .panel-header h2 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+  .panel-header p { font-size: 12px; color: var(--muted); letter-spacing: 0.3px; }
+
+  /* ── CHART CONTAINERS ── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    position: relative;
+  }
+  .chart-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── INSIGHT BOX ── */
+  .insight {
+    margin-top: 24px;
+    padding: 18px 22px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.9;
+    color: #909aaf;
+  }
+  .insight.orange { background: rgba(245,124,0,0.07); border: 1px solid rgba(245,124,0,0.2); }
+  .insight.green  { background: rgba(46,125,50,0.07); border: 1px solid rgba(46,125,50,0.2); }
+  .insight strong { color: #fff; }
+  .insight-title { font-size: 12px; font-weight: 800; letter-spacing: 0.6px; margin-bottom: 8px; }
+
+  /* ── RADAR PANEL ── */
+  .radar-grid { display: grid; grid-template-columns: 480px 1fr; gap: 32px; align-items: start; }
+  @media (max-width: 1100px) { .radar-grid { grid-template-columns: 1fr; } }
+
+  /* ── COMPARISON TABLE ── */
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .comp-table th {
+    padding: 8px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .comp-table tr:nth-child(odd) td { background: rgba(255,255,255,0.015); }
+
+  /* ── FOOTER TABLE ── */
+  .footer-section {
+    margin-top: 56px;
+    padding-top: 36px;
+    border-top: 1px solid var(--border);
+  }
+  .footer-section h3 {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .big-table { width: 100%; border-collapse: collapse; font-size: 12px; overflow-x: auto; display: block; }
+  .big-table th {
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .big-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    white-space: nowrap;
+  }
+  .big-table tr:nth-child(odd) td { background: rgba(255,255,255,0.01); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .pos { color: #4caf50; }
+  .neg { color: #ef5350; }
+  .footnote { font-size: 10px; color: var(--muted); margin-top: 12px; }
+
+  /* ── DETAIL CARD ── */
+  .detail-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-overlay.open { display: flex; }
+  .detail-card {
+    background: #0f1420;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    padding: 36px;
+    width: 480px;
+    max-width: 95vw;
+    position: relative;
+    animation: popIn .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn { from { opacity:0; transform: scale(.92); } to { opacity:1; transform: scale(1); } }
+  .detail-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .detail-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .detail-meta { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .metric-box {
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .metric-box .label { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .metric-box .value { font-size: 18px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- DETAIL OVERLAY -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-card">
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+    <div class="detail-name" id="dc-name"></div>
+    <div class="detail-meta" id="dc-meta"></div>
+    <div class="detail-grid" id="dc-grid"></div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <h1>Settore <span>Agrumi</span> — Sicilia &amp; Calabria</h1>
+    <p>Analisi comparativa · 8 aziende · Dati bilanci 2022–2024 · Fonti pubbliche</p>
+  </div>
+  <div class="header-badges" id="companyBadges"></div>
+</header>
+
+<!-- TABS -->
+<nav>
+  <div class="tab active" onclick="switchTab('fatturato',this)">Fatturato</div>
+  <div class="tab" onclick="switchTab('crescita',this)">Crescita %</div>
+  <div class="tab" onclick="switchTab('utile',this)">Utile Netto</div>
+  <div class="tab" onclick="switchTab('efficienza',this)">Efficienza Lavoro</div>
+  <div class="tab" onclick="switchTab('radar',this)">Radar PMI</div>
+</nav>
+
+<!-- PANELS -->
+<main>
+
+  <!-- FATTURATO -->
+  <div class="panel active" id="panel-fatturato">
+    <div class="panel-header">
+      <h2>Ricavi Consolidati 2022–2024</h2>
+      <p>Valori in milioni di euro. Dati 2024 disponibili solo per aziende con bilancio depositato.</p>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-label">Fatturato (€M) per anno</div>
+      <canvas id="chartFatturato" height="90"></canvas>
+    </div>
+    <div class="insight orange">
+      <div class="insight-title">📊 Highlights Fatturato</div>
+      <strong>Capua 1880</strong> e <strong>Agrumaria Reggina</strong> superano €100M nel 2024, guidando il settore in Calabria.<br/>
+      <strong>Misitano &amp; Stracuzzi</strong> raggiunge €72.8M (+25.7%), unica quotata del panel, crescita costante e profittevole.<br/>
+      <strong>Eurofood</strong> si posiziona a €43.5M con solida redditività nonostante un lieve calo del fatturato nel 2023.<br/>
+      <strong>Simone Gatto</strong> rimane stagnante tra €28–29M dal 2022 — struttura dei costi problematica.
+    </div>
+  </div>
+
+  <!-- CRESCITA -->
+  <div class="panel" id="panel-crescita">
+    <div class="panel-header">
+      <h2>Tassi di Crescita Anno su Anno</h2>
+      <p>Variazione percentuale del fatturato. Periodi: 2022→2023 e 2023→2024.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-wrap">
+        <div class="chart-label">Crescita 2022 → 2023 (%)</div>
+        <canvas id="chartCrescita22" height="180"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-label">Crescita 2023 → 2024 (%)</div>
+        <canvas id="chartCrescita23" height="180"></canvas>
+      </div>
+    </div>
+    <div class="insight orange">
+      <div class="insight-title">📈 Highlights Crescita</div>
+      <strong>Gioia Succhi</strong>: +85% nel 2022→23 — la più alta tra le PMI, crescita straordinaria per una società fondata nel 1999.<br/>
+      <strong>Agrumaria Reggina</strong>: +71% nel 2022→23, +44.9% nel 2023→24 — espansione sostenuta e continua.<br/>
+      <strong>M&amp;S</strong>: crescita costante +21% e +23% — il miglior equilibrio tra crescita e redditività.<br/>
+      <strong>Eurofood</strong>: –4% nel 2022→23 ma EBITDA 16.5% — azienda matura che privilegia margini su volume.<br/>
+      <strong>Simone Gatto</strong>: –1% poi +2% — stagnazione strutturale preoccupante.
+    </div>
+  </div>
+
+  <!-- UTILE -->
+  <div class="panel" id="panel-utile">
+    <div class="panel-header">
+      <h2>Utile Netto Comparato</h2>
+      <p>Risultato d'esercizio in milioni di euro. Ultimo anno disponibile per ciascuna azienda.</p>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-label">Utile netto (€M) — anno più recente disponibile</div>
+      <canvas id="chartUtile" height="80"></canvas>
+    </div>
+    <div class="insight green">
+      <div class="insight-title">💰 Highlights Redditività</div>
+      <strong>M&amp;S</strong>: €8.92M utile 2024, margine 12.2% — best-in-class del settore per efficienza netta.<br/>
+      <strong>Gioia Succhi</strong>: €3.62M utile 2023, margine 15.3% — la più redditizia in rapporto al fatturato.<br/>
+      <strong>Eurofood</strong>: €3.24M utile 2023, EBITDA €7.16M (16.5%) — eccellente redditività operativa.<br/>
+      <strong>Agrumaria Reggina</strong>: €5.72M utile 2023, margine 8.1% — ottima performance in fase di forte crescita.<br/>
+      <strong>Simone Gatto</strong>: –€659K perdita 2024 — unica azienda del panel in rosso.
+    </div>
+  </div>
+
+  <!-- EFFICIENZA -->
+  <div class="panel" id="panel-efficienza">
+    <div class="panel-header">
+      <h2>Costi del Lavoro &amp; Efficienza</h2>
+      <p>Costo personale assoluto (€M) e incidenza percentuale sul fatturato (anno 2023).</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-wrap">
+        <div class="chart-label">Costo personale assoluto (€M) — 2023</div>
+        <canvas id="chartCostoAss" height="200"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-label">Incidenza % costo personale / fatturato — 2023</div>
+        <canvas id="chartIncidenza" height="200"></canvas>
+      </div>
+    </div>
+    <div class="insight green">
+      <div class="insight-title">💡 Analisi Efficienza del Lavoro</div>
+      <strong>M&amp;S</strong>: ~6.2% — struttura molto automatizzata, la più efficiente del panel.<br/>
+      <strong>Capua 1880</strong>: ~6.8% con 164 dipendenti — efficienza su grande scala.<br/>
+      <strong>Agrumaria Reggina</strong>: ~6.6% — ottima gestione anche in forte crescita.<br/>
+      <strong>Eurofood</strong>: ~8.3% — buona efficienza, EBITDA 16.5%, maturità industriale dal 1979.<br/>
+      <strong>Gioia Succhi</strong>: ~9.4% — nella media per una PMI con quel livello di utile (15.3%).<br/>
+      <strong>Citrofood</strong>: ~10.9% — dimensioni contenute giustificano costi fissi elevati.<br/>
+      <strong>Simone Gatto</strong>: ~11.3% — il più alto, segnale di struttura meno automatizzata.
+    </div>
+  </div>
+
+  <!-- RADAR -->
+  <div class="panel" id="panel-radar">
+    <div class="panel-header">
+      <h2>Radar Comparativo — PMI del Distretto</h2>
+      <p>Indici normalizzati 0–100. M&amp;S, Gatto, Gioia, Citrofood, Eurofood a confronto multidimensionale.</p>
+    </div>
+    <div class="radar-grid">
+      <div class="chart-wrap">
+        <canvas id="chartRadar" height="120"></canvas>
+      </div>
+      <div>
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th style="color:var(--muted)">Dimensione</th>
+              <th style="color:var(--ms)">M&amp;S</th>
+              <th style="color:var(--gatto)">Gatto</th>
+              <th style="color:var(--gioia)">Gioia</th>
+              <th style="color:var(--citro)">Citrofood</th>
+              <th style="color:var(--eurofood)">Eurofood</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Fatturato 2023</td><td style="color:var(--ms)">€57.5M</td><td style="color:var(--gatto)">€28.5M</td><td style="color:var(--gioia)">€23.7M</td><td style="color:var(--citro)">€17.9M</td><td style="color:var(--eurofood)">€43.5M</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Utile 2023</td><td style="color:var(--ms)">+€7.08M</td><td style="color:var(--gatto)">n/d</td><td style="color:var(--gioia)">+€3.62M</td><td style="color:var(--citro)">+€0.23M</td><td style="color:var(--eurofood)">+€3.24M</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Crescita 22→23</td><td class="pos">+21%</td><td class="neg">−1%</td><td class="pos">+85%</td><td class="pos">+14%</td><td class="neg">−4%</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Costo pers. 2023</td><td style="color:var(--ms)">€3.58M</td><td style="color:var(--gatto)">€3.21M</td><td style="color:var(--gioia)">€2.23M</td><td style="color:var(--citro)">€1.96M</td><td style="color:var(--eurofood)">€3.59M</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Inc. % personale</td><td style="color:var(--ms)">~6.2%</td><td style="color:var(--gatto)">~11.3%</td><td style="color:var(--gioia)">~9.4%</td><td style="color:var(--citro)">~10.9%</td><td style="color:var(--eurofood)">~8.3%</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Dipendenti</td><td style="color:var(--ms)">111</td><td style="color:var(--gatto)">74</td><td style="color:var(--gioia)">~35</td><td style="color:var(--citro)">~30</td><td style="color:var(--eurofood)">50–99</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Fondazione</td><td style="color:var(--ms)">1922</td><td style="color:var(--gatto)">1922</td><td style="color:var(--gioia)">1999</td><td style="color:var(--citro)">2010</td><td style="color:var(--eurofood)">1979</td></tr>
+            <tr><td style="color:#aaa;font-family:Syne;font-weight:600">Regione</td><td style="color:var(--ms)">Sicilia</td><td style="color:var(--gatto)">Sicilia</td><td style="color:var(--gioia)">Calabria</td><td style="color:var(--citro)">Sicilia</td><td style="color:var(--eurofood)">Sicilia</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER TABLE -->
+  <div class="footer-section">
+    <h3>📋 Riepilogo Comparativo Completo</h3>
+    <table class="big-table">
+      <thead>
+        <tr>
+          <th>Azienda</th>
+          <th>Regione</th>
+          <th>Sede</th>
+          <th>Fond.</th>
+          <th>Fatt. 2024</th>
+          <th>Fatt. 2023</th>
+          <th>Crescita</th>
+          <th>Utile</th>
+          <th>Costo Pers.</th>
+          <th>Dipendenti</th>
+        </tr>
+      </thead>
+      <tbody id="bigTableBody"></tbody>
+    </table>
+    <p class="footnote">* costo personale 2023 ove 2024 non disponibile. Fonti: bilanci ufficiali, Registro Imprese, comunicati stampa. Dati 2024 parziali.</p>
+  </div>
+
+</main>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
 const COMPANIES = [
-  {
-    name: "Capua 1880",
-    shortName: "Capua",
-    region: "Calabria",
-    sede: "Campo Calabro (RC)",
-    fondazione: 1880,
-    settore: "Oli essenziali",
-    fatturato2024: 108.5,
-    fatturato2023: 77.5,
-    fatturato2022: 74.0,
-    utile2024: 5.1,
-    utile2023: 2.7,
-    costoPers2023: 5.30,
-    costoPers2024: 5.94,
-    dipendenti: 164,
-    color: "#C0392B",
-    accent: "#E74C3C",
-  },
-  {
-    name: "Agrumaria Reggina",
-    shortName: "Reggina",
-    region: "Calabria",
-    sede: "Reggio Calabria (RC)",
-    fondazione: 1985,
-    settore: "Succhi & Oli",
-    fatturato2024: 101.9,
-    fatturato2023: 70.3,
-    fatturato2022: 41.0,
-    utile2024: null,
-    utile2023: 5.72,
-    costoPers2023: 4.63,
-    costoPers2024: null,
-    dipendenti: 80,
-    color: "#8E44AD",
-    accent: "#9B59B6",
-  },
-  {
-    name: "Misitano & Stracuzzi",
-    shortName: "M&S",
-    region: "Sicilia",
-    sede: "Messina (ME)",
-    fondazione: 1922,
-    settore: "Oli essenziali",
-    fatturato2024: 72.8,
-    fatturato2023: 57.5,
-    fatturato2022: 47.5,
-    utile2024: 8.92,
-    utile2023: 7.08,
-    costoPers2023: 3.58,
-    costoPers2024: 4.1,
-    dipendenti: 111,
-    color: "#E67E22",
-    accent: "#F39C12",
-  },
-  {
-    name: "Simone Gatto",
-    shortName: "Gatto",
-    region: "Sicilia",
-    sede: "San Pier Niceto (ME)",
-    fondazione: 1922,
-    settore: "Oli & Succhi",
-    fatturato2024: 29.1,
-    fatturato2023: 28.5,
-    fatturato2022: 28.8,
-    utile2024: -0.66,
-    utile2023: null,
-    costoPers2023: 3.21,
-    costoPers2024: 3.7,
-    dipendenti: 74,
-    color: "#27AE60",
-    accent: "#2ECC71",
-  },
-  {
-    name: "Agrumaria Corleone",
-    shortName: "Corleone",
-    region: "Sicilia",
-    sede: "Palermo (PA)",
-    fondazione: 1890,
-    settore: "Succhi & Oli",
-    fatturato2024: null,
-    fatturato2023: 20.9,
-    fatturato2022: 18.0,
-    utile2024: null,
-    utile2023: null,
-    costoPers2023: null,
-    costoPers2024: null,
-    dipendenti: 35,
-    color: "#2980B9",
-    accent: "#3498DB",
-  },
-  {
-    name: "Gioia Succhi",
-    shortName: "Gioia",
-    region: "Calabria",
-    sede: "San Ferdinando (RC)",
-    fondazione: 1999,
-    settore: "Succhi agrumi",
-    fatturato2024: null,
-    fatturato2023: 23.7,
-    fatturato2022: 12.8,
-    utile2024: null,
-    utile2023: 3.62,
-    costoPers2023: 2.23,
-    costoPers2024: null,
-    dipendenti: 35,
-    color: "#16A085",
-    accent: "#1ABC9C",
-  },
-  {
-    name: "Citrofood",
-    shortName: "Citrofood",
-    region: "Sicilia",
-    sede: "Capo d'Orlando (ME)",
-    fondazione: 2010,
-    settore: "Succhi & Oli",
-    fatturato2024: null,
-    fatturato2023: 17.9,
-    fatturato2022: 15.7,
-    utile2024: null,
-    utile2023: 0.23,
-    costoPers2023: 1.96,
-    costoPers2024: null,
-    dipendenti: 30,
-    color: "#D35400",
-    accent: "#E67E22",
-  },
-  {
-    name: "Eurofood",
-    shortName: "Eurofood",
-    region: "Sicilia",
-    sede: "Capo d'Orlando (ME)",
-    fondazione: 1979,
-    settore: "Succhi & Oli",
-    fatturato2024: null,
-    fatturato2023: 43.5,
-    fatturato2022: 45.3,
-    utile2024: null,
-    utile2023: 3.24,
-    costoPers2023: 3.59,
-    costoPers2024: null,
-    dipendenti: 75,
-    color: "#8E44AD",
-    accent: "#9B59B6",
-  },
+  { name:"Capua 1880",       short:"Capua",    region:"Calabria", sede:"Campo Calabro (RC)",    fond:1880, settore:"Oli essenziali", f24:108.5, f23:77.5,  f22:74.0, u24:5.10, u23:2.70, cp23:5.30, cp24:5.94, dip:164, color:"#e53935" },
+  { name:"Agrumaria Reggina",short:"Reggina",  region:"Calabria", sede:"Reggio Calabria (RC)",  fond:1985, settore:"Succhi & Oli",   f24:101.9, f23:70.3,  f22:41.0, u24:null, u23:5.72, cp23:4.63, cp24:null, dip:80,  color:"#7b1fa2" },
+  { name:"Misitano & Stracuzzi",short:"M&S",  region:"Sicilia",  sede:"Messina (ME)",          fond:1922, settore:"Oli essenziali", f24:72.8,  f23:57.5,  f22:47.5, u24:8.92, u23:7.08, cp23:3.58, cp24:4.10, dip:111, color:"#f57c00" },
+  { name:"Eurofood",         short:"Eurofood", region:"Sicilia",  sede:"Capo d'Orlando (ME)",   fond:1979, settore:"Succhi & Oli",   f24:null,  f23:43.5,  f22:45.3, u24:null, u23:3.24, cp23:3.59, cp24:null, dip:75,  color:"#6a1b9a" },
+  { name:"Simone Gatto",     short:"Gatto",    region:"Sicilia",  sede:"San Pier Niceto (ME)",  fond:1922, settore:"Oli & Succhi",   f24:29.1,  f23:28.5,  f22:28.8, u24:-0.66,u23:null, cp23:3.21, cp24:3.70, dip:74,  color:"#2e7d32" },
+  { name:"Gioia Succhi",     short:"Gioia",    region:"Calabria", sede:"San Ferdinando (RC)",   fond:1999, settore:"Succhi agrumi",  f24:null,  f23:23.7,  f22:12.8, u24:null, u23:3.62, cp23:2.23, cp24:null, dip:35,  color:"#00695c" },
+  { name:"Agrumaria Corleone",short:"Corleone",region:"Sicilia",  sede:"Palermo (PA)",          fond:1890, settore:"Succhi & Oli",   f24:null,  f23:20.9,  f22:18.0, u24:null, u23:null, cp23:null, cp24:null, dip:35,  color:"#1565c0" },
+  { name:"Citrofood",        short:"Citrofood",region:"Sicilia",  sede:"Capo d'Orlando (ME)",   fond:2010, settore:"Succhi & Oli",   f24:null,  f23:17.9,  f22:15.7, u24:null, u23:0.23, cp23:1.96, cp24:null, dip:30,  color:"#bf360c" },
 ];
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{
-        background: "rgba(10,10,15,0.95)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 8,
-        padding: "12px 16px",
-        fontFamily: "'DM Mono', monospace",
-        fontSize: 12,
-        color: "#e0e0e0",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
-      }}>
-        <p style={{ color: "#fff", fontWeight: 700, marginBottom: 6, fontSize: 13 }}>{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.color, margin: "2px 0" }}>
-            {p.name}: {typeof p.value === "number" ? (Math.abs(p.value) >= 1 ? `€ ${p.value.toFixed(1)} mln` : `€ ${(p.value * 1000).toFixed(0)}k`) : "n/d"}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+// ── UTILITY ───────────────────────────────────────────────────────────────────
+const fmt = v => v != null ? `€${v.toFixed(1)}M` : "—";
+const pct = (a, b) => b != null && a != null ? ((a - b) / b * 100).toFixed(1) : null;
+const hex2rgba = (hex, a) => {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
 };
 
-const MetricCard = ({ label, value, unit, color, sub }) => (
-  <div style={{
-    background: "rgba(255,255,255,0.04)",
-    border: `1px solid ${color}44`,
-    borderLeft: `3px solid ${color}`,
-    borderRadius: 8,
-    padding: "14px 18px",
-    flex: 1,
-    minWidth: 140,
-  }}>
-    <div style={{ color: "#888", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>{label}</div>
-    <div style={{ color: color, fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono', monospace" }}>
-      {value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 3 }}>{unit}</span>
-    </div>
-    {sub && <div style={{ color: "#666", fontSize: 10, marginTop: 4 }}>{sub}</div>}
-  </div>
-);
+const CHART_DEFAULTS = {
+  plugins: { legend: { labels: { color:"#8090a8", font:{ family:"Syne", size:11, weight:"700" }, boxWidth:12, padding:18 } }, tooltip: { backgroundColor:"#0d111a", borderColor:"rgba(255,255,255,0.1)", borderWidth:1, titleColor:"#fff", bodyColor:"#8090a8", titleFont:{family:"Syne",weight:"700"}, bodyFont:{family:"JetBrains Mono"}, padding:12 } },
+  scales: {
+    x: { ticks:{ color:"#5a6070", font:{family:"Syne",size:11} }, grid:{ color:"rgba(255,255,255,0.04)" }, border:{ color:"rgba(255,255,255,0.07)" } },
+    y: { ticks:{ color:"#5a6070", font:{family:"JetBrains Mono",size:10} }, grid:{ color:"rgba(255,255,255,0.04)" }, border:{ color:"rgba(255,255,255,0.07)" } }
+  }
+};
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState("fatturato");
-  const [selectedCompany, setSelectedCompany] = useState(null);
-
-  // Fatturato comparison data
-  const fatturatoData = COMPANIES.filter(c => c.fatturato2023).map(c => ({
-    name: c.shortName,
-    "2022": c.fatturato2022,
-    "2023": c.fatturato2023,
-    "2024": c.fatturato2024,
-    color: c.color,
-  }));
-
-  // Profitability data
-  const utileData = COMPANIES.filter(c => c.utile2023 !== null || c.utile2024 !== null).map(c => ({
-    name: c.shortName,
-    "Utile 2023": c.utile2023,
-    "Utile 2024": c.utile2024,
-    color: c.color,
-  }));
-
-  // Costo personale vs fatturato (efficiency)
-  const efficienzaData = COMPANIES.filter(c => c.costoPers2023 && c.fatturato2023).map(c => ({
-    name: c.shortName,
-    fatturato: c.fatturato2023,
-    costoPers: c.costoPers2023,
-    incidenza: parseFloat(((c.costoPers2023 / c.fatturato2023) * 100).toFixed(1)),
-    dipendenti: c.dipendenti,
-    color: c.color,
-  }));
-
-  // Growth rate
-  const crescitaData = COMPANIES.filter(c => c.fatturato2022 && c.fatturato2023).map(c => ({
-    name: c.shortName,
-    "Cresc. 22→23": parseFloat(((c.fatturato2023 - c.fatturato2022) / c.fatturato2022 * 100).toFixed(1)),
-    "Cresc. 23→24": c.fatturato2024 ? parseFloat(((c.fatturato2024 - c.fatturato2023) / c.fatturato2023 * 100).toFixed(1)) : null,
-    color: c.color,
-  }));
-
-  // Radar data — aziende medie Sicilia a confronto
-  const radarData = [
-    { subject: "Fatturato", "M&S": 90, "Gatto": 25, "Gioia": 22, "Citrofood": 16, "Eurofood": 38 },
-    { subject: "Crescita", "M&S": 95, "Gatto": 15, "Gioia": 85, "Citrofood": 40, "Eurofood": 20 },
-    { subject: "Redditività", "M&S": 85, "Gatto": 5, "Gioia": 70, "Citrofood": 30, "Eurofood": 65 },
-    { subject: "Dipendenti", "M&S": 70, "Gatto": 50, "Gioia": 30, "Citrofood": 25, "Eurofood": 52 },
-    { subject: "Efficienza pers.", "M&S": 80, "Gatto": 55, "Gioia": 82, "Citrofood": 78, "Eurofood": 75 },
-    { subject: "Longevità", "M&S": 70, "Gatto": 70, "Gioia": 15, "Citrofood": 10, "Eurofood": 80 },
-  ];
-
-  const tabs = [
-    { id: "fatturato", label: "Fatturato" },
-    { id: "crescita", label: "Crescita %" },
-    { id: "utile", label: "Utile Netto" },
-    { id: "efficienza", label: "Costo Personale" },
-    { id: "radar", label: "M&S vs Gatto" },
-  ];
-
-  const selected = selectedCompany ? COMPANIES.find(c => c.shortName === selectedCompany) : null;
-
-  return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#080c10",
-      color: "#e0e0e0",
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-      padding: "0",
-    }}>
-      {/* Header */}
-      <div style={{
-        background: "linear-gradient(135deg, #0d1117 0%, #111827 100%)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-        padding: "28px 40px 24px",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: 3, color: "#F39C12", textTransform: "uppercase", marginBottom: 6 }}>
-              🍋 Settore Agrumi · Sicilia & Calabria
-            </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", margin: 0, letterSpacing: -0.5 }}>
-              Analisi Competitiva del Settore
-            </h1>
-            <p style={{ color: "#666", fontSize: 13, margin: "6px 0 0", fontFamily: "'DM Mono', monospace" }}>
-              Oli essenziali & succhi di agrumi · Dati bilanci 2022–2024
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {COMPANIES.map(c => (
-              <button
-                key={c.shortName}
-                onClick={() => setSelectedCompany(selectedCompany === c.shortName ? null : c.shortName)}
-                style={{
-                  background: selectedCompany === c.shortName ? c.color : "rgba(255,255,255,0.05)",
-                  border: `1px solid ${selectedCompany === c.shortName ? c.color : "rgba(255,255,255,0.1)"}`,
-                  color: selectedCompany === c.shortName ? "#fff" : c.color,
-                  padding: "6px 14px",
-                  borderRadius: 20,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  transition: "all 0.2s",
-                }}
-              >
-                {c.shortName}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Company detail card */}
-        {selected && (
-          <div style={{
-            marginTop: 20,
-            background: `linear-gradient(135deg, ${selected.color}15, rgba(0,0,0,0))`,
-            border: `1px solid ${selected.color}33`,
-            borderRadius: 12,
-            padding: "16px 20px",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: selected.color }}>{selected.name}</div>
-                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
-                  📍 {selected.sede} · 🏭 {selected.settore} · 📅 Dal {selected.fondazione}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <MetricCard label="Fatturato 2024" value={selected.fatturato2024 ?? "n/d"} unit={selected.fatturato2024 ? "mln €" : ""} color={selected.color} />
-                <MetricCard label="Utile 2024" value={selected.utile2024 !== null && selected.utile2024 !== undefined ? selected.utile2024.toFixed(2) : "n/d"} unit={selected.utile2024 !== null && selected.utile2024 !== undefined ? "mln €" : ""} color={selected.utile2024 > 0 ? "#2ECC71" : "#E74C3C"} />
-                <MetricCard label="Dipendenti" value={selected.dipendenti} unit="" color={selected.color} />
-                <MetricCard label="Costo Pers. 2023" value={selected.costoPers2023 ? `${(selected.costoPers2023).toFixed(2)}` : "n/d"} unit={selected.costoPers2023 ? "mln €" : ""} color={selected.color} sub={selected.costoPers2023 && selected.fatturato2023 ? `${((selected.costoPers2023 / selected.fatturato2023) * 100).toFixed(1)}% del fatturato` : ""} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div style={{
-        display: "flex",
-        gap: 4,
-        padding: "16px 40px 0",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-      }}>
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            style={{
-              background: activeTab === t.id ? "rgba(243,156,18,0.12)" : "transparent",
-              border: "none",
-              borderBottom: activeTab === t.id ? "2px solid #F39C12" : "2px solid transparent",
-              color: activeTab === t.id ? "#F39C12" : "#666",
-              padding: "10px 18px",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              transition: "all 0.2s",
-              letterSpacing: 0.3,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Chart Area */}
-      <div style={{ padding: "32px 40px" }}>
-
-        {/* FATTURATO */}
-        {activeTab === "fatturato" && (
-          <div>
-            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Fatturato per Azienda (€ milioni)</h2>
-            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Confronto triennale 2022–2024. * Dati 2024 Reggina e Corleone: stima/non ancora disponibile.</p>
-            <ResponsiveContainer width="100%" height={380}>
-              <BarChart data={fatturatoData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
-                <Bar dataKey="2022" name="2022" radius={[3,3,0,0]} maxBarSize={28}>
-                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color + "55"} />)}
-                </Bar>
-                <Bar dataKey="2023" name="2023" radius={[3,3,0,0]} maxBarSize={28}>
-                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color + "99"} />)}
-                </Bar>
-                <Bar dataKey="2024" name="2024" radius={[3,3,0,0]} maxBarSize={28}>
-                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-
-            {/* Legend pills */}
-            <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-              {COMPANIES.map(c => (
-                <div key={c.name} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "rgba(255,255,255,0.04)",
-                  border: `1px solid ${c.color}33`,
-                  borderRadius: 8, padding: "8px 12px",
-                }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 2, background: c.color }} />
-                  <div>
-                    <div style={{ color: "#ddd", fontSize: 12, fontWeight: 600 }}>{c.name}</div>
-                    <div style={{ color: "#666", fontSize: 10 }}>{c.region} · {c.sede}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* CRESCITA */}
-        {activeTab === "crescita" && (
-          <div>
-            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Tasso di Crescita del Fatturato (%)</h2>
-            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Variazione percentuale anno su anno. Valori negativi indicano contrazione.</p>
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={crescitaData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={6}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
-                <Bar dataKey="Cresc. 22→23" name="Crescita 2022→2023" radius={[3,3,0,0]} maxBarSize={32}>
-                  {crescitaData.map((e, i) => <Cell key={i} fill={e.color + "99"} />)}
-                </Bar>
-                <Bar dataKey="Cresc. 23→24" name="Crescita 2023→2024" radius={[3,3,0,0]} maxBarSize={32}>
-                  {crescitaData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ marginTop: 24, padding: 16, background: "rgba(243,156,18,0.06)", border: "1px solid rgba(243,156,18,0.2)", borderRadius: 10 }}>
-              <div style={{ fontSize: 12, color: "#F39C12", fontWeight: 700, marginBottom: 8 }}>📊 Highlights Crescita</div>
-              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.8 }}>
-                • <strong style={{color:"#fff"}}>Agrumaria Reggina</strong>: crescita esplosiva +71% nel 2022→23, e +44.9% nel 2023→24 (da €41M a €102M)<br/>
-                • <strong style={{color:"#fff"}}>Gioia Succhi</strong>: crescita straordinaria +85% nel 2022→23 (da €12.8M a €23.7M) — la più alta tra le PMI<br/>
-                • <strong style={{color:"#fff"}}>Misitano & Stracuzzi</strong>: crescita sostenuta e costante (+21% e +23%), la migliore tra le quotate<br/>
-                • <strong style={{color:"#fff"}}>Capua 1880</strong>: +4.7% nel 2023 e +40% nel 2024 — espansione accelerata recente<br/>
-                • <strong style={{color:"#fff"}}>Citrofood</strong>: +14% nel 2022→23 — crescita moderata ma profittevole<br/>
-                • <strong style={{color:"#fff"}}>Eurofood</strong>: -4% nel 2022→23 (da €45.3M a €43.5M) — leggero calo ma solida redditività (EBITDA 16.5%)<br/>
-                • <strong style={{color:"#fff"}}>Simone Gatto</strong>: sostanzialmente piatta dal 2022 (-1% poi +2%) — stagnazione preoccupante
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* UTILE */}
-        {activeTab === "utile" && (
-          <div>
-            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Utile / Perdita Netta (€ milioni)</h2>
-            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Confronto redditività netta. Valori negativi = perdita d'esercizio.</p>
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={utileData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={6}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
-                <Bar dataKey="Utile 2023" name="Utile 2023" radius={[3,3,0,0]} maxBarSize={36}>
-                  {utileData.map((e, i) => <Cell key={i} fill={e.color + "99"} />)}
-                </Bar>
-                <Bar dataKey="Utile 2024" name="Utile 2024" radius={[3,3,0,0]} maxBarSize={36}>
-                  {utileData.map((e, i) => <Cell key={i} fill={e["Utile 2024"] < 0 ? "#E74C3C" : e.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 24 }}>
-              {[
-                { label: "Margine netto M&S 2024", value: "12.2%", color: "#F39C12", note: "Best in class settore" },
-                { label: "Margine netto Capua 2024", value: "4.7%", color: "#C0392B", note: "Solido, in crescita" },
-                { label: "Margine netto Reggina 2023", value: "8.1%", color: "#8E44AD", note: "Eccellente per le dimensioni" },
-                { label: "Risultato Gatto 2024", value: "–€659K", color: "#E74C3C", note: "Perdita: pressione sui margini" },
-              ].map((item, i) => (
-                <div key={i} style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: `1px solid ${item.color}33`,
-                  borderRadius: 10, padding: "14px 16px"
-                }}>
-                  <div style={{ fontSize: 10, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{item.label}</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: item.color, fontFamily: "'DM Mono'" }}>{item.value}</div>
-                  <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>{item.note}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* EFFICIENZA */}
-        {activeTab === "efficienza" && (
-          <div>
-            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Costo del Personale & Incidenza sul Fatturato</h2>
-            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Anno 2023. L'incidenza % indica quanto del fatturato è assorbito dal costo del lavoro.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              <div>
-                <div style={{ fontSize: 13, color: "#aaa", marginBottom: 12 }}>Costo assoluto personale (€ mln)</div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={efficienzaData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: "#666", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
-                    <YAxis dataKey="name" type="category" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} width={55} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="costoPers" name="Costo Personale" radius={[0,4,4,0]} maxBarSize={28}>
-                      {efficienzaData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: "#aaa", marginBottom: 12 }}>Incidenza % sul fatturato</div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={efficienzaData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: "#666", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 15]} />
-                    <YAxis dataKey="name" type="category" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} width={55} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="incidenza" name="Incidenza % fatturato" radius={[0,4,4,0]} maxBarSize={28}>
-                      {efficienzaData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div style={{ marginTop: 20, padding: 16, background: "rgba(46,204,113,0.06)", border: "1px solid rgba(46,204,113,0.2)", borderRadius: 10 }}>
-              <div style={{ fontSize: 12, color: "#2ECC71", fontWeight: 700, marginBottom: 8 }}>💡 Analisi Efficienza del Lavoro</div>
-              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.8 }}>
-                • <strong style={{color:"#fff"}}>M&S</strong>: incidenza ~6.2% — struttura produttiva molto automatizzata, efficiente per il settore<br/>
-                • <strong style={{color:"#fff"}}>Capua 1880</strong>: incidenza ~6.8% con 100-199 dipendenti — efficienza su grande scala<br/>
-                • <strong style={{color:"#fff"}}>Agrumaria Reggina</strong>: incidenza ~6.6% — ottima gestione del lavoro in forte crescita<br/>
-                • <strong style={{color:"#fff"}}>Eurofood</strong>: incidenza ~8.3% — buona efficienza, EBITDA €7.16M (16.5% sul fatturato), azienda matura dal 1979<br/>
-                • <strong style={{color:"#fff"}}>Gioia Succhi</strong>: incidenza ~9.4% — buona per una PMI da €23.7M; utile 2023 notevole (€3.62M, 15.3%!)<br/>
-                • <strong style={{color:"#fff"}}>Citrofood</strong>: incidenza ~10.9% — media, dimensioni contenute giustificano i costi fissi<br/>
-                • <strong style={{color:"#fff"}}>Simone Gatto</strong>: incidenza ~11.3% — il più alto del confronto, segnale di struttura meno automatizzata
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* RADAR M&S vs GATTO */}
-        {activeTab === "radar" && (
-          <div>
-            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Analisi Comparativa: Aziende Medie del Distretto</h2>
-            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Indici normalizzati (0–100) basati su dati di settore. M&S, Simone Gatto, Gioia Succhi e Citrofood a confronto.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center" }}>
-              <ResponsiveContainer width="100%" height={380}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#aaa", fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#555", fontSize: 9 }} />
-                  <Radar name="Misitano & Stracuzzi" dataKey="M&S" stroke="#F39C12" fill="#F39C12" fillOpacity={0.2} strokeWidth={2} />
-                  <Radar name="Simone Gatto" dataKey="Gatto" stroke="#27AE60" fill="#27AE60" fillOpacity={0.2} strokeWidth={2} />
-                  <Radar name="Gioia Succhi" dataKey="Gioia" stroke="#16A085" fill="#16A085" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 3" />
-                  <Radar name="Citrofood" dataKey="Citrofood" stroke="#D35400" fill="#D35400" fillOpacity={0.15} strokeWidth={2} strokeDasharray="3 3" />
-                  <Radar name="Eurofood" dataKey="Eurofood" stroke="#8E44AD" fill="#8E44AD" fillOpacity={0.15} strokeWidth={2} strokeDasharray="6 2" />
-                  <Legend wrapperStyle={{ color: "#aaa", fontSize: 12 }} />
-                  <Tooltip contentStyle={{ background: "#0d1117", border: "1px solid #333", borderRadius: 8, color: "#eee", fontSize: 12 }} />
-                </RadarChart>
-              </ResponsiveContainer>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "110px 60px 60px 60px 60px 60px", gap: 6, padding: "0 12px", marginBottom: 4 }}>
-                  <div style={{ color: "#555", fontSize: 10 }}>DIMENSIONE</div>
-                  <div style={{ color: "#F39C12", fontSize: 10, fontWeight: 700 }}>M&S</div>
-                  <div style={{ color: "#27AE60", fontSize: 10, fontWeight: 700 }}>GATTO</div>
-                  <div style={{ color: "#16A085", fontSize: 10, fontWeight: 700 }}>GIOIA</div>
-                  <div style={{ color: "#D35400", fontSize: 10, fontWeight: 700 }}>CITROFOOD</div>
-                  <div style={{ color: "#8E44AD", fontSize: 10, fontWeight: 700 }}>EUROFOOD</div>
-                </div>
-                {[
-                  { dim: "Fatturato 2023", ms: "€57.5M", gatto: "€28.5M", gioia: "€23.7M", citro: "€17.9M", euro: "€43.5M" },
-                  { dim: "Utile 2023", ms: "+€7.08M", gatto: "n/d", gioia: "+€3.62M", citro: "+€0.23M", euro: "+€3.24M" },
-                  { dim: "Crescita 22→23", ms: "+21%", gatto: "-1%", gioia: "+85%", citro: "+14%", euro: "-4%" },
-                  { dim: "Costo pers. 2023", ms: "€3.58M", gatto: "€3.21M", gioia: "€2.23M", citro: "€1.96M", euro: "€3.59M" },
-                  { dim: "Inc. % pers.", ms: "~6.2%", gatto: "~11.3%", gioia: "~9.4%", citro: "~10.9%", euro: "~8.3%" },
-                  { dim: "Dipendenti", ms: "111", gatto: "74", gioia: "~35", citro: "~30", euro: "50-99" },
-                  { dim: "Fondazione", ms: "1922", gatto: "1922", gioia: "1999", citro: "2010", euro: "1979" },
-                  { dim: "Regione", ms: "Sicilia", gatto: "Sicilia", gioia: "Calabria", citro: "Sicilia", euro: "Sicilia" },
-                ].map((row, i) => (
-                  <div key={i} style={{
-                    display: "grid", gridTemplateColumns: "110px 60px 60px 60px 60px 60px",
-                    gap: 6, alignItems: "center",
-                    padding: "7px 12px",
-                    background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
-                    borderRadius: 6, fontSize: 11,
-                  }}>
-                    <div style={{ color: "#aaa", fontWeight: 600 }}>{row.dim}</div>
-                    <div style={{ color: "#F39C12", fontFamily: "'DM Mono'" }}>{row.ms}</div>
-                    <div style={{ color: "#27AE60", fontFamily: "'DM Mono'" }}>{row.gatto}</div>
-                    <div style={{ color: "#16A085", fontFamily: "'DM Mono'" }}>{row.gioia}</div>
-                    <div style={{ color: "#D35400", fontFamily: "'DM Mono'" }}>{row.citro}</div>
-                    <div style={{ color: "#8E44AD", fontFamily: "'DM Mono'" }}>{row.euro}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Footer table */}
-      <div style={{ padding: "0 40px 40px" }}>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 28 }}>
-          <h3 style={{ color: "#fff", fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📋 Riepilogo Comparativo Completo</h3>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-                  {["Azienda", "Regione", "Sede", "Fond.", "Fatt. 2024", "Fatt. 2023", "Crescita", "Utile 2024", "Costo Pers.", "Dipendenti"].map(h => (
-                    <th key={h} style={{ color: "#666", fontWeight: 600, textAlign: "left", padding: "8px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {COMPANIES.map((c, i) => {
-                  const crescita = c.fatturato2024 && c.fatturato2023 ? ((c.fatturato2024 - c.fatturato2023) / c.fatturato2023 * 100).toFixed(1) : null;
-                  return (
-                    <tr key={i} style={{
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
-                    }}>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
-                          <span style={{ color: "#fff", fontWeight: 600 }}>{c.name}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px", color: c.region === "Calabria" ? "#C0392B" : "#E67E22" }}>{c.region}</td>
-                      <td style={{ padding: "10px 12px", color: "#888" }}>{c.sede}</td>
-                      <td style={{ padding: "10px 12px", color: "#666", fontFamily: "'DM Mono'" }}>{c.fondazione}</td>
-                      <td style={{ padding: "10px 12px", color: c.color, fontFamily: "'DM Mono'", fontWeight: 700 }}>{c.fatturato2024 ? `€${c.fatturato2024}M` : "—"}</td>
-                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.fatturato2023 ? `€${c.fatturato2023}M` : "—"}</td>
-                      <td style={{ padding: "10px 12px", fontFamily: "'DM Mono'", color: crescita ? (crescita > 0 ? "#2ECC71" : "#E74C3C") : "#666" }}>
-                        {crescita ? `${crescita > 0 ? "+" : ""}${crescita}%` : "—"}
-                      </td>
-                      <td style={{ padding: "10px 12px", fontFamily: "'DM Mono'", color: c.utile2024 !== null && c.utile2024 !== undefined ? (c.utile2024 >= 0 ? "#2ECC71" : "#E74C3C") : "#666" }}>
-                        {c.utile2024 !== null && c.utile2024 !== undefined ? `€${c.utile2024 > 0 ? "+" : ""}${c.utile2024.toFixed(2)}M` : "—"}
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.costoPers2024 ? `€${c.costoPers2024.toFixed(2)}M` : c.costoPers2023 ? `€${c.costoPers2023.toFixed(2)}M*` : "—"}</td>
-                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.dipendenti}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ color: "#444", fontSize: 10, marginTop: 12 }}>* dati 2023 ove 2024 non disponibile. Fonti: bilanci ufficiali, Registro Imprese, comunicati stampa aziendali.</p>
-        </div>
-      </div>
-    </div>
-  );
+function mergeDeep(...objs) {
+  const result = {};
+  for (const obj of objs) for (const k in obj) {
+    if (obj[k] && typeof obj[k] === 'object' && !Array.isArray(obj[k]))
+      result[k] = mergeDeep(result[k] || {}, obj[k]);
+    else result[k] = obj[k];
+  }
+  return result;
 }
+
+// ── BADGES ────────────────────────────────────────────────────────────────────
+const badgeContainer = document.getElementById('companyBadges');
+COMPANIES.forEach(c => {
+  const b = document.createElement('div');
+  b.className = 'badge';
+  b.textContent = c.short;
+  b.style.color = c.color;
+  b.style.borderColor = hex2rgba(c.color, 0.4);
+  b.style.background = hex2rgba(c.color, 0.07);
+  b.onclick = () => showDetail(c);
+  badgeContainer.appendChild(b);
+});
+
+// ── DETAIL CARD ───────────────────────────────────────────────────────────────
+function showDetail(c) {
+  document.getElementById('dc-name').textContent = c.name;
+  document.getElementById('dc-name').style.color = c.color;
+  document.getElementById('dc-meta').textContent = `${c.sede} · Fondata ${c.fond} · ${c.settore}`;
+  const g = document.getElementById('dc-grid');
+  const u = c.u24 ?? c.u23;
+  const uLabel = c.u24 != null ? '2024' : '2023';
+  const cp = c.cp24 ?? c.cp23;
+  const cpLabel = c.cp24 != null ? '2024' : '2023';
+  const f = c.f24 ?? c.f23;
+  const fLabel = c.f24 != null ? '2024' : '2023';
+  const gr = pct(c.f24 ?? c.f23, c.f23 ?? c.f22);
+  g.innerHTML = `
+    <div class="metric-box"><div class="label">Fatturato ${fLabel}</div><div class="value" style="color:${c.color}">${fmt(f)}</div></div>
+    <div class="metric-box"><div class="label">Utile netto ${uLabel}</div><div class="value" style="color:${u!=null&&u>=0?'#4caf50':'#ef5350'}">${u!=null?`${u>=0?'+':''}€${Math.abs(u).toFixed(2)}M`:"n/d"}</div></div>
+    <div class="metric-box"><div class="label">Costo personale ${cpLabel}</div><div class="value" style="color:#8090a8">${cp!=null?fmt(cp):"n/d"}</div></div>
+    <div class="metric-box"><div class="label">Dipendenti</div><div class="value" style="color:#8090a8">${c.dip}</div></div>
+    <div class="metric-box"><div class="label">Regione</div><div class="value" style="color:${c.region==='Calabria'?'#e53935':'#f57c00'};font-size:14px">${c.region}</div></div>
+    <div class="metric-box"><div class="label">Inc. % personale</div><div class="value" style="color:#8090a8;font-size:14px">${cp!=null&&(c.f23||c.f24)?`~${((cp/(c.f23||c.f24))*100).toFixed(1)}%`:"n/d"}</div></div>
+  `;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('open'); }
+document.getElementById('detailOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeDetail(); });
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+// ── CHART 1: FATTURATO ────────────────────────────────────────────────────────
+new Chart(document.getElementById('chartFatturato'), {
+  type: 'bar',
+  data: {
+    labels: COMPANIES.map(c => c.short),
+    datasets: [
+      { label:'2022', data: COMPANIES.map(c=>c.f22), backgroundColor: COMPANIES.map(c=>hex2rgba(c.color,.3)), borderColor: COMPANIES.map(c=>hex2rgba(c.color,.5)), borderWidth:1, borderRadius:3 },
+      { label:'2023', data: COMPANIES.map(c=>c.f23), backgroundColor: COMPANIES.map(c=>hex2rgba(c.color,.55)), borderColor: COMPANIES.map(c=>c.color), borderWidth:1, borderRadius:3 },
+      { label:'2024', data: COMPANIES.map(c=>c.f24), backgroundColor: COMPANIES.map(c=>c.color), borderColor: COMPANIES.map(c=>c.color), borderWidth:1, borderRadius:3 },
+    ]
+  },
+  options: mergeDeep({ responsive:true, animation:{duration:600} }, CHART_DEFAULTS, {
+    scales: { y:{ ticks:{ callback: v=>`€${v}M` } } }
+  })
+});
+
+// ── CHART 2: CRESCITA 22-23 ───────────────────────────────────────────────────
+const cr2223 = COMPANIES.map(c => pct(c.f23, c.f22));
+new Chart(document.getElementById('chartCrescita22'), {
+  type:'bar',
+  data: {
+    labels: COMPANIES.map(c=>c.short),
+    datasets:[{ label:'Crescita 22→23 (%)', data: cr2223,
+      backgroundColor: cr2223.map((v,i)=> v>=0 ? hex2rgba(COMPANIES[i].color,.7) : 'rgba(239,83,80,.6)'),
+      borderColor: cr2223.map((v,i)=> v>=0 ? COMPANIES[i].color : '#ef5350'),
+      borderWidth:1, borderRadius:4 }]
+  },
+  options: mergeDeep({ responsive:true, indexAxis:'y' }, CHART_DEFAULTS, {
+    plugins:{ legend:{display:false} },
+    scales:{ x:{ ticks:{ callback: v=>`${v>0?'+':''}${v}%` }, grid:{color:"rgba(255,255,255,0.04)"} } }
+  })
+});
+
+// ── CHART 3: CRESCITA 23-24 ───────────────────────────────────────────────────
+const cr2324 = COMPANIES.map(c => pct(c.f24, c.f23));
+new Chart(document.getElementById('chartCrescita23'), {
+  type:'bar',
+  data: {
+    labels: COMPANIES.map(c=>c.short),
+    datasets:[{ label:'Crescita 23→24 (%)', data: cr2324,
+      backgroundColor: cr2324.map((v,i)=> v==null?'rgba(255,255,255,0.05)': v>=0 ? hex2rgba(COMPANIES[i].color,.7) : 'rgba(239,83,80,.6)'),
+      borderColor: cr2324.map((v,i)=> v==null?'rgba(255,255,255,0.1)': v>=0 ? COMPANIES[i].color : '#ef5350'),
+      borderWidth:1, borderRadius:4 }]
+  },
+  options: mergeDeep({ responsive:true, indexAxis:'y' }, CHART_DEFAULTS, {
+    plugins:{ legend:{display:false} },
+    scales:{ x:{ ticks:{ callback: v=>`${v>0?'+':''}${v}%` } } }
+  })
+});
+
+// ── CHART 4: UTILE NETTO ─────────────────────────────────────────────────────
+const utileData = COMPANIES.map(c => c.u24 ?? c.u23);
+new Chart(document.getElementById('chartUtile'), {
+  type:'bar',
+  data: {
+    labels: COMPANIES.map(c=>c.short),
+    datasets:[{ label:'Utile netto (€M)', data: utileData,
+      backgroundColor: utileData.map((v,i)=> v==null?'rgba(255,255,255,0.04)': v>=0?hex2rgba(COMPANIES[i].color,.75):'rgba(239,83,80,.6)'),
+      borderColor: utileData.map((v,i)=> v==null?'rgba(255,255,255,0.1)': v>=0?COMPANIES[i].color:'#ef5350'),
+      borderWidth:1, borderRadius:4 }]
+  },
+  options: mergeDeep({ responsive:true, animation:{duration:600} }, CHART_DEFAULTS, {
+    plugins:{ legend:{display:false} },
+    scales:{ y:{ ticks:{ callback: v=>`€${v}M` } } }
+  })
+});
+
+// ── CHART 5a: COSTO PERSONALE ASSOLUTO ───────────────────────────────────────
+const effCo = COMPANIES.filter(c=>c.cp23!=null);
+new Chart(document.getElementById('chartCostoAss'), {
+  type:'bar',
+  data: {
+    labels: effCo.map(c=>c.short),
+    datasets:[{ label:'Costo personale (€M)', data: effCo.map(c=>c.cp23),
+      backgroundColor: effCo.map(c=>hex2rgba(c.color,.65)), borderColor: effCo.map(c=>c.color), borderWidth:1, borderRadius:4 }]
+  },
+  options: mergeDeep({ responsive:true, indexAxis:'y' }, CHART_DEFAULTS, {
+    plugins:{legend:{display:false}}, scales:{x:{ticks:{callback:v=>`€${v}M`}}}
+  })
+});
+
+// ── CHART 5b: INCIDENZA % ─────────────────────────────────────────────────────
+const effIn = COMPANIES.filter(c=>c.cp23!=null && c.f23!=null);
+new Chart(document.getElementById('chartIncidenza'), {
+  type:'bar',
+  data: {
+    labels: effIn.map(c=>c.short),
+    datasets:[{ label:'% su fatturato', data: effIn.map(c=>((c.cp23/c.f23)*100).toFixed(1)),
+      backgroundColor: effIn.map(c=>hex2rgba(c.color,.65)), borderColor: effIn.map(c=>c.color), borderWidth:1, borderRadius:4 }]
+  },
+  options: mergeDeep({ responsive:true, indexAxis:'y' }, CHART_DEFAULTS, {
+    plugins:{legend:{display:false}}, scales:{x:{ticks:{callback:v=>`${v}%`}, max:14}}
+  })
+});
+
+// ── CHART 6: RADAR ────────────────────────────────────────────────────────────
+const pmiNames = ["M&S","Gatto","Gioia","Citrofood","Eurofood"];
+const pmiColors = ["#f57c00","#2e7d32","#00695c","#bf360c","#6a1b9a"];
+const radarData = {
+  labels: ["Fatturato","Crescita","Redditività","Dipendenti","Eff. Lavoro","Longevità"],
+  datasets: [
+    { label:"M&S",      data:[90,95,85,70,80,70], borderColor:pmiColors[0], backgroundColor:hex2rgba(pmiColors[0],.12), borderWidth:2, pointBackgroundColor:pmiColors[0], pointRadius:4 },
+    { label:"Gatto",    data:[25,15,5,50,55,70],  borderColor:pmiColors[1], backgroundColor:hex2rgba(pmiColors[1],.12), borderWidth:2, pointBackgroundColor:pmiColors[1], pointRadius:4, borderDash:[5,3] },
+    { label:"Gioia",    data:[22,85,70,30,82,15], borderColor:pmiColors[2], backgroundColor:hex2rgba(pmiColors[2],.1),  borderWidth:2, pointBackgroundColor:pmiColors[2], pointRadius:4, borderDash:[4,3] },
+    { label:"Citrofood",data:[16,40,30,25,78,10], borderColor:pmiColors[3], backgroundColor:hex2rgba(pmiColors[3],.1),  borderWidth:2, pointBackgroundColor:pmiColors[3], pointRadius:4, borderDash:[3,3] },
+    { label:"Eurofood", data:[38,20,65,52,75,80], borderColor:pmiColors[4], backgroundColor:hex2rgba(pmiColors[4],.1),  borderWidth:2, pointBackgroundColor:pmiColors[4], pointRadius:4, borderDash:[6,2] },
+  ]
+};
+new Chart(document.getElementById('chartRadar'), {
+  type:'radar',
+  data: radarData,
+  options: {
+    responsive:true,
+    scales:{ r:{ min:0, max:100, ticks:{ color:"#3a4050", font:{size:9}, stepSize:25, backdropColor:"transparent" }, grid:{ color:"rgba(255,255,255,0.07)" }, angleLines:{ color:"rgba(255,255,255,0.07)" }, pointLabels:{ color:"#8090a8", font:{family:"Syne",size:11,weight:"700"} } } },
+    plugins:{ legend:{ labels:{ color:"#8090a8", font:{family:"Syne",size:11,weight:"700"}, boxWidth:10, padding:16, usePointStyle:true } }, tooltip:{ backgroundColor:"#0d111a", borderColor:"rgba(255,255,255,0.1)", borderWidth:1, titleColor:"#fff", bodyColor:"#8090a8", titleFont:{family:"Syne",weight:"700"}, bodyFont:{family:"JetBrains Mono"}, padding:12 } },
+    animation:{duration:700}
+  }
+});
+
+// ── FOOTER TABLE ──────────────────────────────────────────────────────────────
+const tbody = document.getElementById('bigTableBody');
+COMPANIES.forEach((c,i) => {
+  const gr = pct(c.f24??c.f23, c.f23??c.f22);
+  const u = c.u24 ?? c.u23;
+  const uYear = c.u24!=null?'24':'23';
+  const cp = c.cp24 ?? c.cp23;
+  const cpYear = c.cp24!=null?'24':'23';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="dot" style="background:${c.color}"></span><strong style="color:#fff">${c.name}</strong></td>
+    <td style="color:${c.region==='Calabria'?'#e53935':'#f57c00'}">${c.region}</td>
+    <td style="color:#5a6070">${c.sede}</td>
+    <td class="mono" style="color:#5a6070">${c.fond}</td>
+    <td class="mono" style="color:${c.color};font-weight:700">${fmt(c.f24)}</td>
+    <td class="mono" style="color:#8090a8">${fmt(c.f23)}</td>
+    <td class="mono ${gr!=null?(gr>0?'pos':'neg'):''}">${gr!=null?`${gr>0?'+':''}${gr}%`:"—"}</td>
+    <td class="mono ${u!=null?(u>=0?'pos':'neg'):''}">${u!=null?`${u>=0?'+':''}€${Math.abs(u).toFixed(2)}M`:"—"}</td>
+    <td class="mono" style="color:#8090a8">${cp!=null?`€${cp.toFixed(2)}M*`:"—"}</td>
+    <td class="mono" style="color:#8090a8">${c.dip}</td>
+  `;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
