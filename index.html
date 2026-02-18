@@ -1,0 +1,650 @@
+import { useState } from "react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ScatterChart, Scatter, ZAxis,
+  ResponsiveContainer, Cell
+} from "recharts";
+
+const COMPANIES = [
+  {
+    name: "Capua 1880",
+    shortName: "Capua",
+    region: "Calabria",
+    sede: "Campo Calabro (RC)",
+    fondazione: 1880,
+    settore: "Oli essenziali",
+    fatturato2024: 108.5,
+    fatturato2023: 77.5,
+    fatturato2022: 74.0,
+    utile2024: 5.1,
+    utile2023: 2.7,
+    costoPers2023: 5.30,
+    costoPers2024: 5.94,
+    dipendenti: 164,
+    color: "#C0392B",
+    accent: "#E74C3C",
+  },
+  {
+    name: "Agrumaria Reggina",
+    shortName: "Reggina",
+    region: "Calabria",
+    sede: "Reggio Calabria (RC)",
+    fondazione: 1985,
+    settore: "Succhi & Oli",
+    fatturato2024: 101.9,
+    fatturato2023: 70.3,
+    fatturato2022: 41.0,
+    utile2024: null,
+    utile2023: 5.72,
+    costoPers2023: 4.63,
+    costoPers2024: null,
+    dipendenti: 80,
+    color: "#8E44AD",
+    accent: "#9B59B6",
+  },
+  {
+    name: "Misitano & Stracuzzi",
+    shortName: "M&S",
+    region: "Sicilia",
+    sede: "Messina (ME)",
+    fondazione: 1922,
+    settore: "Oli essenziali",
+    fatturato2024: 72.8,
+    fatturato2023: 57.5,
+    fatturato2022: 47.5,
+    utile2024: 8.92,
+    utile2023: 7.08,
+    costoPers2023: 3.58,
+    costoPers2024: 4.1,
+    dipendenti: 111,
+    color: "#E67E22",
+    accent: "#F39C12",
+  },
+  {
+    name: "Simone Gatto",
+    shortName: "Gatto",
+    region: "Sicilia",
+    sede: "San Pier Niceto (ME)",
+    fondazione: 1922,
+    settore: "Oli & Succhi",
+    fatturato2024: 29.1,
+    fatturato2023: 28.5,
+    fatturato2022: 28.8,
+    utile2024: -0.66,
+    utile2023: null,
+    costoPers2023: 3.21,
+    costoPers2024: 3.7,
+    dipendenti: 74,
+    color: "#27AE60",
+    accent: "#2ECC71",
+  },
+  {
+    name: "Agrumaria Corleone",
+    shortName: "Corleone",
+    region: "Sicilia",
+    sede: "Palermo (PA)",
+    fondazione: 1890,
+    settore: "Succhi & Oli",
+    fatturato2024: null,
+    fatturato2023: 20.9,
+    fatturato2022: 18.0,
+    utile2024: null,
+    utile2023: null,
+    costoPers2023: null,
+    costoPers2024: null,
+    dipendenti: 35,
+    color: "#2980B9",
+    accent: "#3498DB",
+  },
+  {
+    name: "Gioia Succhi",
+    shortName: "Gioia",
+    region: "Calabria",
+    sede: "San Ferdinando (RC)",
+    fondazione: 1999,
+    settore: "Succhi agrumi",
+    fatturato2024: null,
+    fatturato2023: 23.7,
+    fatturato2022: 12.8,
+    utile2024: null,
+    utile2023: 3.62,
+    costoPers2023: 2.23,
+    costoPers2024: null,
+    dipendenti: 35,
+    color: "#16A085",
+    accent: "#1ABC9C",
+  },
+  {
+    name: "Citrofood",
+    shortName: "Citrofood",
+    region: "Sicilia",
+    sede: "Capo d'Orlando (ME)",
+    fondazione: 2010,
+    settore: "Succhi & Oli",
+    fatturato2024: null,
+    fatturato2023: 17.9,
+    fatturato2022: 15.7,
+    utile2024: null,
+    utile2023: 0.23,
+    costoPers2023: 1.96,
+    costoPers2024: null,
+    dipendenti: 30,
+    color: "#D35400",
+    accent: "#E67E22",
+  },
+  {
+    name: "Eurofood",
+    shortName: "Eurofood",
+    region: "Sicilia",
+    sede: "Capo d'Orlando (ME)",
+    fondazione: 1979,
+    settore: "Succhi & Oli",
+    fatturato2024: null,
+    fatturato2023: 43.5,
+    fatturato2022: 45.3,
+    utile2024: null,
+    utile2023: 3.24,
+    costoPers2023: 3.59,
+    costoPers2024: null,
+    dipendenti: 75,
+    color: "#8E44AD",
+    accent: "#9B59B6",
+  },
+];
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: "rgba(10,10,15,0.95)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        padding: "12px 16px",
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 12,
+        color: "#e0e0e0",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
+      }}>
+        <p style={{ color: "#fff", fontWeight: 700, marginBottom: 6, fontSize: 13 }}>{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} style={{ color: p.color, margin: "2px 0" }}>
+            {p.name}: {typeof p.value === "number" ? (Math.abs(p.value) >= 1 ? `€ ${p.value.toFixed(1)} mln` : `€ ${(p.value * 1000).toFixed(0)}k`) : "n/d"}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const MetricCard = ({ label, value, unit, color, sub }) => (
+  <div style={{
+    background: "rgba(255,255,255,0.04)",
+    border: `1px solid ${color}44`,
+    borderLeft: `3px solid ${color}`,
+    borderRadius: 8,
+    padding: "14px 18px",
+    flex: 1,
+    minWidth: 140,
+  }}>
+    <div style={{ color: "#888", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 4 }}>{label}</div>
+    <div style={{ color: color, fontSize: 22, fontWeight: 800, fontFamily: "'DM Mono', monospace" }}>
+      {value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 3 }}>{unit}</span>
+    </div>
+    {sub && <div style={{ color: "#666", fontSize: 10, marginTop: 4 }}>{sub}</div>}
+  </div>
+);
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState("fatturato");
+  const [selectedCompany, setSelectedCompany] = useState(null);
+
+  // Fatturato comparison data
+  const fatturatoData = COMPANIES.filter(c => c.fatturato2023).map(c => ({
+    name: c.shortName,
+    "2022": c.fatturato2022,
+    "2023": c.fatturato2023,
+    "2024": c.fatturato2024,
+    color: c.color,
+  }));
+
+  // Profitability data
+  const utileData = COMPANIES.filter(c => c.utile2023 !== null || c.utile2024 !== null).map(c => ({
+    name: c.shortName,
+    "Utile 2023": c.utile2023,
+    "Utile 2024": c.utile2024,
+    color: c.color,
+  }));
+
+  // Costo personale vs fatturato (efficiency)
+  const efficienzaData = COMPANIES.filter(c => c.costoPers2023 && c.fatturato2023).map(c => ({
+    name: c.shortName,
+    fatturato: c.fatturato2023,
+    costoPers: c.costoPers2023,
+    incidenza: parseFloat(((c.costoPers2023 / c.fatturato2023) * 100).toFixed(1)),
+    dipendenti: c.dipendenti,
+    color: c.color,
+  }));
+
+  // Growth rate
+  const crescitaData = COMPANIES.filter(c => c.fatturato2022 && c.fatturato2023).map(c => ({
+    name: c.shortName,
+    "Cresc. 22→23": parseFloat(((c.fatturato2023 - c.fatturato2022) / c.fatturato2022 * 100).toFixed(1)),
+    "Cresc. 23→24": c.fatturato2024 ? parseFloat(((c.fatturato2024 - c.fatturato2023) / c.fatturato2023 * 100).toFixed(1)) : null,
+    color: c.color,
+  }));
+
+  // Radar data — aziende medie Sicilia a confronto
+  const radarData = [
+    { subject: "Fatturato", "M&S": 90, "Gatto": 25, "Gioia": 22, "Citrofood": 16, "Eurofood": 38 },
+    { subject: "Crescita", "M&S": 95, "Gatto": 15, "Gioia": 85, "Citrofood": 40, "Eurofood": 20 },
+    { subject: "Redditività", "M&S": 85, "Gatto": 5, "Gioia": 70, "Citrofood": 30, "Eurofood": 65 },
+    { subject: "Dipendenti", "M&S": 70, "Gatto": 50, "Gioia": 30, "Citrofood": 25, "Eurofood": 52 },
+    { subject: "Efficienza pers.", "M&S": 80, "Gatto": 55, "Gioia": 82, "Citrofood": 78, "Eurofood": 75 },
+    { subject: "Longevità", "M&S": 70, "Gatto": 70, "Gioia": 15, "Citrofood": 10, "Eurofood": 80 },
+  ];
+
+  const tabs = [
+    { id: "fatturato", label: "Fatturato" },
+    { id: "crescita", label: "Crescita %" },
+    { id: "utile", label: "Utile Netto" },
+    { id: "efficienza", label: "Costo Personale" },
+    { id: "radar", label: "M&S vs Gatto" },
+  ];
+
+  const selected = selectedCompany ? COMPANIES.find(c => c.shortName === selectedCompany) : null;
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#080c10",
+      color: "#e0e0e0",
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      padding: "0",
+    }}>
+      {/* Header */}
+      <div style={{
+        background: "linear-gradient(135deg, #0d1117 0%, #111827 100%)",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        padding: "28px 40px 24px",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: 3, color: "#F39C12", textTransform: "uppercase", marginBottom: 6 }}>
+              🍋 Settore Agrumi · Sicilia & Calabria
+            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", margin: 0, letterSpacing: -0.5 }}>
+              Analisi Competitiva del Settore
+            </h1>
+            <p style={{ color: "#666", fontSize: 13, margin: "6px 0 0", fontFamily: "'DM Mono', monospace" }}>
+              Oli essenziali & succhi di agrumi · Dati bilanci 2022–2024
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {COMPANIES.map(c => (
+              <button
+                key={c.shortName}
+                onClick={() => setSelectedCompany(selectedCompany === c.shortName ? null : c.shortName)}
+                style={{
+                  background: selectedCompany === c.shortName ? c.color : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${selectedCompany === c.shortName ? c.color : "rgba(255,255,255,0.1)"}`,
+                  color: selectedCompany === c.shortName ? "#fff" : c.color,
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  transition: "all 0.2s",
+                }}
+              >
+                {c.shortName}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Company detail card */}
+        {selected && (
+          <div style={{
+            marginTop: 20,
+            background: `linear-gradient(135deg, ${selected.color}15, rgba(0,0,0,0))`,
+            border: `1px solid ${selected.color}33`,
+            borderRadius: 12,
+            padding: "16px 20px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: selected.color }}>{selected.name}</div>
+                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+                  📍 {selected.sede} · 🏭 {selected.settore} · 📅 Dal {selected.fondazione}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <MetricCard label="Fatturato 2024" value={selected.fatturato2024 ?? "n/d"} unit={selected.fatturato2024 ? "mln €" : ""} color={selected.color} />
+                <MetricCard label="Utile 2024" value={selected.utile2024 !== null && selected.utile2024 !== undefined ? selected.utile2024.toFixed(2) : "n/d"} unit={selected.utile2024 !== null && selected.utile2024 !== undefined ? "mln €" : ""} color={selected.utile2024 > 0 ? "#2ECC71" : "#E74C3C"} />
+                <MetricCard label="Dipendenti" value={selected.dipendenti} unit="" color={selected.color} />
+                <MetricCard label="Costo Pers. 2023" value={selected.costoPers2023 ? `${(selected.costoPers2023).toFixed(2)}` : "n/d"} unit={selected.costoPers2023 ? "mln €" : ""} color={selected.color} sub={selected.costoPers2023 && selected.fatturato2023 ? `${((selected.costoPers2023 / selected.fatturato2023) * 100).toFixed(1)}% del fatturato` : ""} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: "flex",
+        gap: 4,
+        padding: "16px 40px 0",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              background: activeTab === t.id ? "rgba(243,156,18,0.12)" : "transparent",
+              border: "none",
+              borderBottom: activeTab === t.id ? "2px solid #F39C12" : "2px solid transparent",
+              color: activeTab === t.id ? "#F39C12" : "#666",
+              padding: "10px 18px",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
+              transition: "all 0.2s",
+              letterSpacing: 0.3,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart Area */}
+      <div style={{ padding: "32px 40px" }}>
+
+        {/* FATTURATO */}
+        {activeTab === "fatturato" && (
+          <div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Fatturato per Azienda (€ milioni)</h2>
+            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Confronto triennale 2022–2024. * Dati 2024 Reggina e Corleone: stima/non ancora disponibile.</p>
+            <ResponsiveContainer width="100%" height={380}>
+              <BarChart data={fatturatoData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
+                <Bar dataKey="2022" name="2022" radius={[3,3,0,0]} maxBarSize={28}>
+                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color + "55"} />)}
+                </Bar>
+                <Bar dataKey="2023" name="2023" radius={[3,3,0,0]} maxBarSize={28}>
+                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color + "99"} />)}
+                </Bar>
+                <Bar dataKey="2024" name="2024" radius={[3,3,0,0]} maxBarSize={28}>
+                  {fatturatoData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+
+            {/* Legend pills */}
+            <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
+              {COMPANIES.map(c => (
+                <div key={c.name} style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "rgba(255,255,255,0.04)",
+                  border: `1px solid ${c.color}33`,
+                  borderRadius: 8, padding: "8px 12px",
+                }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: c.color }} />
+                  <div>
+                    <div style={{ color: "#ddd", fontSize: 12, fontWeight: 600 }}>{c.name}</div>
+                    <div style={{ color: "#666", fontSize: 10 }}>{c.region} · {c.sede}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CRESCITA */}
+        {activeTab === "crescita" && (
+          <div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Tasso di Crescita del Fatturato (%)</h2>
+            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Variazione percentuale anno su anno. Valori negativi indicano contrazione.</p>
+            <ResponsiveContainer width="100%" height={360}>
+              <BarChart data={crescitaData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={6}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
+                <Bar dataKey="Cresc. 22→23" name="Crescita 2022→2023" radius={[3,3,0,0]} maxBarSize={32}>
+                  {crescitaData.map((e, i) => <Cell key={i} fill={e.color + "99"} />)}
+                </Bar>
+                <Bar dataKey="Cresc. 23→24" name="Crescita 2023→2024" radius={[3,3,0,0]} maxBarSize={32}>
+                  {crescitaData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ marginTop: 24, padding: 16, background: "rgba(243,156,18,0.06)", border: "1px solid rgba(243,156,18,0.2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 12, color: "#F39C12", fontWeight: 700, marginBottom: 8 }}>📊 Highlights Crescita</div>
+              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.8 }}>
+                • <strong style={{color:"#fff"}}>Agrumaria Reggina</strong>: crescita esplosiva +71% nel 2022→23, e +44.9% nel 2023→24 (da €41M a €102M)<br/>
+                • <strong style={{color:"#fff"}}>Gioia Succhi</strong>: crescita straordinaria +85% nel 2022→23 (da €12.8M a €23.7M) — la più alta tra le PMI<br/>
+                • <strong style={{color:"#fff"}}>Misitano & Stracuzzi</strong>: crescita sostenuta e costante (+21% e +23%), la migliore tra le quotate<br/>
+                • <strong style={{color:"#fff"}}>Capua 1880</strong>: +4.7% nel 2023 e +40% nel 2024 — espansione accelerata recente<br/>
+                • <strong style={{color:"#fff"}}>Citrofood</strong>: +14% nel 2022→23 — crescita moderata ma profittevole<br/>
+                • <strong style={{color:"#fff"}}>Eurofood</strong>: -4% nel 2022→23 (da €45.3M a €43.5M) — leggero calo ma solida redditività (EBITDA 16.5%)<br/>
+                • <strong style={{color:"#fff"}}>Simone Gatto</strong>: sostanzialmente piatta dal 2022 (-1% poi +2%) — stagnazione preoccupante
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* UTILE */}
+        {activeTab === "utile" && (
+          <div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Utile / Perdita Netta (€ milioni)</h2>
+            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Confronto redditività netta. Valori negativi = perdita d'esercizio.</p>
+            <ResponsiveContainer width="100%" height={360}>
+              <BarChart data={utileData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={6}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#666", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: "#aaa", fontSize: 12, paddingTop: 16 }} />
+                <Bar dataKey="Utile 2023" name="Utile 2023" radius={[3,3,0,0]} maxBarSize={36}>
+                  {utileData.map((e, i) => <Cell key={i} fill={e.color + "99"} />)}
+                </Bar>
+                <Bar dataKey="Utile 2024" name="Utile 2024" radius={[3,3,0,0]} maxBarSize={36}>
+                  {utileData.map((e, i) => <Cell key={i} fill={e["Utile 2024"] < 0 ? "#E74C3C" : e.color} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 24 }}>
+              {[
+                { label: "Margine netto M&S 2024", value: "12.2%", color: "#F39C12", note: "Best in class settore" },
+                { label: "Margine netto Capua 2024", value: "4.7%", color: "#C0392B", note: "Solido, in crescita" },
+                { label: "Margine netto Reggina 2023", value: "8.1%", color: "#8E44AD", note: "Eccellente per le dimensioni" },
+                { label: "Risultato Gatto 2024", value: "–€659K", color: "#E74C3C", note: "Perdita: pressione sui margini" },
+              ].map((item, i) => (
+                <div key={i} style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${item.color}33`,
+                  borderRadius: 10, padding: "14px 16px"
+                }}>
+                  <div style={{ fontSize: 10, color: "#666", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{item.label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: item.color, fontFamily: "'DM Mono'" }}>{item.value}</div>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>{item.note}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* EFFICIENZA */}
+        {activeTab === "efficienza" && (
+          <div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Costo del Personale & Incidenza sul Fatturato</h2>
+            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Anno 2023. L'incidenza % indica quanto del fatturato è assorbito dal costo del lavoro.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 13, color: "#aaa", marginBottom: 12 }}>Costo assoluto personale (€ mln)</div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={efficienzaData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: "#666", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}M`} />
+                    <YAxis dataKey="name" type="category" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} width={55} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="costoPers" name="Costo Personale" radius={[0,4,4,0]} maxBarSize={28}>
+                      {efficienzaData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: "#aaa", marginBottom: 12 }}>Incidenza % sul fatturato</div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={efficienzaData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: "#666", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 15]} />
+                    <YAxis dataKey="name" type="category" tick={{ fill: "#aaa", fontSize: 12 }} axisLine={false} tickLine={false} width={55} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="incidenza" name="Incidenza % fatturato" radius={[0,4,4,0]} maxBarSize={28}>
+                      {efficienzaData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div style={{ marginTop: 20, padding: 16, background: "rgba(46,204,113,0.06)", border: "1px solid rgba(46,204,113,0.2)", borderRadius: 10 }}>
+              <div style={{ fontSize: 12, color: "#2ECC71", fontWeight: 700, marginBottom: 8 }}>💡 Analisi Efficienza del Lavoro</div>
+              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.8 }}>
+                • <strong style={{color:"#fff"}}>M&S</strong>: incidenza ~6.2% — struttura produttiva molto automatizzata, efficiente per il settore<br/>
+                • <strong style={{color:"#fff"}}>Capua 1880</strong>: incidenza ~6.8% con 100-199 dipendenti — efficienza su grande scala<br/>
+                • <strong style={{color:"#fff"}}>Agrumaria Reggina</strong>: incidenza ~6.6% — ottima gestione del lavoro in forte crescita<br/>
+                • <strong style={{color:"#fff"}}>Eurofood</strong>: incidenza ~8.3% — buona efficienza, EBITDA €7.16M (16.5% sul fatturato), azienda matura dal 1979<br/>
+                • <strong style={{color:"#fff"}}>Gioia Succhi</strong>: incidenza ~9.4% — buona per una PMI da €23.7M; utile 2023 notevole (€3.62M, 15.3%!)<br/>
+                • <strong style={{color:"#fff"}}>Citrofood</strong>: incidenza ~10.9% — media, dimensioni contenute giustificano i costi fissi<br/>
+                • <strong style={{color:"#fff"}}>Simone Gatto</strong>: incidenza ~11.3% — il più alto del confronto, segnale di struttura meno automatizzata
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RADAR M&S vs GATTO */}
+        {activeTab === "radar" && (
+          <div>
+            <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Analisi Comparativa: Aziende Medie del Distretto</h2>
+            <p style={{ color: "#666", fontSize: 12, marginBottom: 24 }}>Indici normalizzati (0–100) basati su dati di settore. M&S, Simone Gatto, Gioia Succhi e Citrofood a confronto.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center" }}>
+              <ResponsiveContainer width="100%" height={380}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="rgba(255,255,255,0.1)" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#aaa", fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#555", fontSize: 9 }} />
+                  <Radar name="Misitano & Stracuzzi" dataKey="M&S" stroke="#F39C12" fill="#F39C12" fillOpacity={0.2} strokeWidth={2} />
+                  <Radar name="Simone Gatto" dataKey="Gatto" stroke="#27AE60" fill="#27AE60" fillOpacity={0.2} strokeWidth={2} />
+                  <Radar name="Gioia Succhi" dataKey="Gioia" stroke="#16A085" fill="#16A085" fillOpacity={0.15} strokeWidth={2} strokeDasharray="5 3" />
+                  <Radar name="Citrofood" dataKey="Citrofood" stroke="#D35400" fill="#D35400" fillOpacity={0.15} strokeWidth={2} strokeDasharray="3 3" />
+                  <Radar name="Eurofood" dataKey="Eurofood" stroke="#8E44AD" fill="#8E44AD" fillOpacity={0.15} strokeWidth={2} strokeDasharray="6 2" />
+                  <Legend wrapperStyle={{ color: "#aaa", fontSize: 12 }} />
+                  <Tooltip contentStyle={{ background: "#0d1117", border: "1px solid #333", borderRadius: 8, color: "#eee", fontSize: 12 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "110px 60px 60px 60px 60px 60px", gap: 6, padding: "0 12px", marginBottom: 4 }}>
+                  <div style={{ color: "#555", fontSize: 10 }}>DIMENSIONE</div>
+                  <div style={{ color: "#F39C12", fontSize: 10, fontWeight: 700 }}>M&S</div>
+                  <div style={{ color: "#27AE60", fontSize: 10, fontWeight: 700 }}>GATTO</div>
+                  <div style={{ color: "#16A085", fontSize: 10, fontWeight: 700 }}>GIOIA</div>
+                  <div style={{ color: "#D35400", fontSize: 10, fontWeight: 700 }}>CITROFOOD</div>
+                  <div style={{ color: "#8E44AD", fontSize: 10, fontWeight: 700 }}>EUROFOOD</div>
+                </div>
+                {[
+                  { dim: "Fatturato 2023", ms: "€57.5M", gatto: "€28.5M", gioia: "€23.7M", citro: "€17.9M", euro: "€43.5M" },
+                  { dim: "Utile 2023", ms: "+€7.08M", gatto: "n/d", gioia: "+€3.62M", citro: "+€0.23M", euro: "+€3.24M" },
+                  { dim: "Crescita 22→23", ms: "+21%", gatto: "-1%", gioia: "+85%", citro: "+14%", euro: "-4%" },
+                  { dim: "Costo pers. 2023", ms: "€3.58M", gatto: "€3.21M", gioia: "€2.23M", citro: "€1.96M", euro: "€3.59M" },
+                  { dim: "Inc. % pers.", ms: "~6.2%", gatto: "~11.3%", gioia: "~9.4%", citro: "~10.9%", euro: "~8.3%" },
+                  { dim: "Dipendenti", ms: "111", gatto: "74", gioia: "~35", citro: "~30", euro: "50-99" },
+                  { dim: "Fondazione", ms: "1922", gatto: "1922", gioia: "1999", citro: "2010", euro: "1979" },
+                  { dim: "Regione", ms: "Sicilia", gatto: "Sicilia", gioia: "Calabria", citro: "Sicilia", euro: "Sicilia" },
+                ].map((row, i) => (
+                  <div key={i} style={{
+                    display: "grid", gridTemplateColumns: "110px 60px 60px 60px 60px 60px",
+                    gap: 6, alignItems: "center",
+                    padding: "7px 12px",
+                    background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                    borderRadius: 6, fontSize: 11,
+                  }}>
+                    <div style={{ color: "#aaa", fontWeight: 600 }}>{row.dim}</div>
+                    <div style={{ color: "#F39C12", fontFamily: "'DM Mono'" }}>{row.ms}</div>
+                    <div style={{ color: "#27AE60", fontFamily: "'DM Mono'" }}>{row.gatto}</div>
+                    <div style={{ color: "#16A085", fontFamily: "'DM Mono'" }}>{row.gioia}</div>
+                    <div style={{ color: "#D35400", fontFamily: "'DM Mono'" }}>{row.citro}</div>
+                    <div style={{ color: "#8E44AD", fontFamily: "'DM Mono'" }}>{row.euro}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Footer table */}
+      <div style={{ padding: "0 40px 40px" }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 28 }}>
+          <h3 style={{ color: "#fff", fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📋 Riepilogo Comparativo Completo</h3>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                  {["Azienda", "Regione", "Sede", "Fond.", "Fatt. 2024", "Fatt. 2023", "Crescita", "Utile 2024", "Costo Pers.", "Dipendenti"].map(h => (
+                    <th key={h} style={{ color: "#666", fontWeight: 600, textAlign: "left", padding: "8px 12px", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPANIES.map((c, i) => {
+                  const crescita = c.fatturato2024 && c.fatturato2023 ? ((c.fatturato2024 - c.fatturato2023) / c.fatturato2023 * 100).toFixed(1) : null;
+                  return (
+                    <tr key={i} style={{
+                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
+                    }}>
+                      <td style={{ padding: "10px 12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
+                          <span style={{ color: "#fff", fontWeight: 600 }}>{c.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px", color: c.region === "Calabria" ? "#C0392B" : "#E67E22" }}>{c.region}</td>
+                      <td style={{ padding: "10px 12px", color: "#888" }}>{c.sede}</td>
+                      <td style={{ padding: "10px 12px", color: "#666", fontFamily: "'DM Mono'" }}>{c.fondazione}</td>
+                      <td style={{ padding: "10px 12px", color: c.color, fontFamily: "'DM Mono'", fontWeight: 700 }}>{c.fatturato2024 ? `€${c.fatturato2024}M` : "—"}</td>
+                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.fatturato2023 ? `€${c.fatturato2023}M` : "—"}</td>
+                      <td style={{ padding: "10px 12px", fontFamily: "'DM Mono'", color: crescita ? (crescita > 0 ? "#2ECC71" : "#E74C3C") : "#666" }}>
+                        {crescita ? `${crescita > 0 ? "+" : ""}${crescita}%` : "—"}
+                      </td>
+                      <td style={{ padding: "10px 12px", fontFamily: "'DM Mono'", color: c.utile2024 !== null && c.utile2024 !== undefined ? (c.utile2024 >= 0 ? "#2ECC71" : "#E74C3C") : "#666" }}>
+                        {c.utile2024 !== null && c.utile2024 !== undefined ? `€${c.utile2024 > 0 ? "+" : ""}${c.utile2024.toFixed(2)}M` : "—"}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.costoPers2024 ? `€${c.costoPers2024.toFixed(2)}M` : c.costoPers2023 ? `€${c.costoPers2023.toFixed(2)}M*` : "—"}</td>
+                      <td style={{ padding: "10px 12px", color: "#aaa", fontFamily: "'DM Mono'" }}>{c.dipendenti}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ color: "#444", fontSize: 10, marginTop: 12 }}>* dati 2023 ove 2024 non disponibile. Fonti: bilanci ufficiali, Registro Imprese, comunicati stampa aziendali.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
